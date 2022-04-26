@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,13 +17,13 @@ import (
 )
 
 func main() {
-	// Valid
-	if len(os.Args) != 3 {
-		panic("Input and output file not provided")
-	}
+	inputFile := flag.String("inputFile", "", "Input file")
+	outputFile := flag.String("outputFile", "output.json", "Output file")
+	flag.Parse()
 
-	inputFile, PathtoOutput := os.Args[1], os.Args[2]
-	var outputFile string
+	if *inputFile == "" {
+		panic("Invalid file Provided")
+	}
 
 	httpWrappedClient := httputil.NewUtility(&http.Client{Timeout: 180 * time.Second})
 	baseURL, err := url.Parse("https://api.github.com/")
@@ -50,7 +51,7 @@ func main() {
 	}
 
 	// go over a file line by line and queue up a ton of work
-	file, err := os.Open(inputFile)
+	file, err := os.Open(*inputFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,13 +61,7 @@ func main() {
 		jobs <- scanner.Text()
 	}
 
-	if PathtoOutput == "" {
-		outputFile = "output.json"
-	} else {
-		outputFile = fmt.Sprintf("%v/output.json", PathtoOutput)
-	}
-
-	go aggregratorObj.Consume(producer, finish, outputFile)
+	go aggregratorObj.Consume(producer, finish, *outputFile)
 	go func() {
 		close(jobs)
 		wg.Wait()
